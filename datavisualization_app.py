@@ -1,63 +1,55 @@
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
-import numpy as np
+import geopandas as gpd
 from sklearn.cluster import KMeans
-import folium
-from streamlit_folium import st_folium
+import plotly.express as px
 
-st.set_page_config(page_title="도서관 이용자 수 분석", layout="wide")
-
-st.title("📚 도서관 이용자 수 분석 및 지도 시각화")
-st.markdown("서울시뿐 아니라 다른 지역도 포함하여 분석합니다.")
-
-# 📂 1. 데이터 로딩 (엑셀 파일 고정)
-@st.cache_data
+# 데이터 불러오기
+@st.cache
 def load_data():
-    file_path = "서울시 공공도서관 서울도서관 이용자 현황.xlsx"
-    df_raw = pd.read_excel(file_path, sheet_name="최신 이용자")
-    df_clean = df_raw.iloc[1:].copy()
-    df_clean.columns = df_raw.iloc[0]
-    df_clean = df_clean.reset_index(drop=True)
-    df_clean = df_clean.rename(columns={"지역": "도서관명", "이용자수": "총이용자수"})
-    df_clean = df_clean[["도서관명", "총이용자수"]]
-    df_clean["총이용자수"] = pd.to_numeric(df_clean["총이용자수"], errors="coerce")
-    df_clean = df_clean.dropna(subset=["총이용자수"])
-    return df_clean
+    df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황.xlsx", sheet_name="최신 이용자", skiprows=2)
+    df = df[pd.to_numeric(df['이용자수'], errors='coerce').notnull()]
+    df = df[['실거주', '이용자수']].rename(columns={'실거주': '구명'})
+    df['이용자수'] = pd.to_numeric(df['이용자수'])
+    return df
+
+# 지도 정보 (서울시 행정구역 중심 좌표가 필요)
+@st.cache
+def load_geo_data():
+    # 서울시 각 구의 중심 좌표 예시 데이터 (사용자 데이터로 대체 가능)
+    return pd.DataFrame({
+        '구명': ['강남구', '서초구', '마포구', '송파구', '노원구', '중구'],
+        'lat': [37.5172, 37.4836, 37.5663, 37.5145, 37.6543, 37.5636],
+        'lon': [127.0473, 127.0324, 126.9015, 127.1066, 127.0568, 126.9976]
+    })
+
+st.title("서울시 도서관 이용자 수 분석")
+st.markdown("출처: 서울시 공공도서관 서울도서관 (2018~2023)")
 
 df = load_data()
-st.subheader("📋 데이터 미리보기")
-st.write(df.head())
+geo = load_geo_data()
 
-# 📍 2. 위도 경도 추가 (임시로 랜덤 생성 또는 사용자 지도 데이터 통합 필요)
-# 실제 사용 시: 도서관 위치 데이터셋과 병합 필요
-if "위도" not in df.columns or "경도" not in df.columns:
-    np.random.seed(42)
-    df["위도"] = np.random.uniform(37.4, 37.7, len(df))
-    df["경도"] = np.random.uniform(126.8, 127.2, len(df))
+# 병합
+merged = pd.merge(df, geo, on="구명", how="inner")
 
-# 📊 3. KMeans 클러스터링 (상위 5개 도서관 중심)
-df_sorted = df.sort_values("총이용자수", ascending=False).reset_index(drop=True)
-top5_coords = df_sorted.head(5)[["위도", "경도"]].values
-coords = df[["위도", "경도"]].values
+# KMeans 클러스터링
+kmeans = KMeans(n_clusters=5, random_state=0)
+merged["cluster"] = kmeans.fit_predict(merged[["이용자수"]])
 
-kmeans = KMeans(n_clusters=5, init=top5_coords, n_init=1)
-df["cluster"] = kmeans.fit_predict(coords)
+# 시각화
+fig = px.scatter_mapbox(
+    merged,
+    lat="lat",
+    lon="lon",
+    color="이용자수",
+    size="이용자수",
+    hover_name="구명",
+    mapbox_style="carto-positron",
+    zoom=10,
+    color_continuous_scale="Viridis",
+    title="서울시 도서관 이용자 수 (군집화)"
+)
 
-cluster_colors = ['red', 'blue', 'green', 'orange', 'purple']
-df["color"] = df["cluster"].apply(lambda x: cluster_colors[x])
+st.plotly_chart(fig)
 
-# 🌍 4. 지도 시각화
-m = folium.Map(location=[df["위도"].mean(), df["경도"].mean()], zoom_start=11)
-
-for _, row in df.iterrows():
-    folium.CircleMarker(
-        location=[row["위도"], row["경도"]],
-        radius=5 + (row["총이용자수"] / df["총이용자수"].max()) * 10,
-        popup=f"{row['도서관명']}<br>이용자 수: {int(row['총이용자수']):,}",
-        color=row["color"],
-        fill=True,
-        fill_opacity=0.7
-    ).add_to(m)
-
-st.subheader("🗺️ 도서관 이용자 수 시각화")
-st_folium(m, width=1000, height=700)
