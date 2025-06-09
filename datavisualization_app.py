@@ -9,9 +9,16 @@ import matplotlib.pyplot as plt
 # -------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황.xlsx", sheet_name="최신 이용자", skiprows=2)
-    df.columns = ['구', '이용자수'] + list(df.columns[2:])  # 첫 두 열 이름 설정
-    df = df[['구', '이용자수']].dropna()
+    df_raw = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황.xlsx", sheet_name="최신 이용자", skiprows=2)
+    df_raw.columns = df_raw.columns.astype(str)  # 열 이름들을 문자열로 변환
+
+    # '구'와 '이용자수'로 추정되는 열 자동 감지
+    gu_col = [col for col in df_raw.columns if '구' in col][0]
+    user_col = [col for col in df_raw.columns if '이용자수' in col or '이용자 수' in col][0]
+
+    df = df_raw[[gu_col, user_col]].copy()
+    df.columns = ['구', '이용자수']
+    df = df.dropna()
     df['이용자수'] = pd.to_numeric(df['이용자수'], errors='coerce')
     return df.dropna()
 
@@ -76,7 +83,6 @@ sample_locations = {
     "중랑구": [37.6063, 127.0927]
 }
 
-# folium 지도 생성
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
 # 정규화 함수 (반지름 계산용)
@@ -110,8 +116,7 @@ st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구
 # 마무리 안내
 # -------------------
 st.markdown("---")
-st.caption("🔗 더 많은 AI 프로젝트 도구는 [https://gptonline.ai/ko/](https://gptonline.ai/ko/) 에서 확인하세요.")
-
+st.caption("🔗 더 많은 AI 자동화 앱은 [https://gptonline.ai/ko/](https://gptonline.ai/ko/)에서 체험해보세요.")
 
 
 
