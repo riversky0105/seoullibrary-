@@ -3,6 +3,22 @@ import pandas as pd
 import folium
 from streamlit_folium import folium_static
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import platform
+
+# -------------------
+# 한글 폰트 설정 (matplotlib)
+# -------------------
+def set_korean_font():
+    if platform.system() == 'Windows':
+        plt.rc('font', family='Malgun Gothic')
+    elif platform.system() == 'Darwin':  # macOS
+        plt.rc('font', family='AppleGothic')
+    else:  # Linux (Streamlit Cloud 등)
+        plt.rc('font', family='NanumGothic')
+    plt.rc('axes', unicode_minus=False)
+
+set_korean_font()
 
 # -------------------
 # 데이터 불러오기
@@ -10,17 +26,20 @@ import matplotlib.pyplot as plt
 @st.cache_data
 def load_data():
     df_raw = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황.xlsx", sheet_name="최신 이용자", skiprows=2)
-    df_raw.columns = df_raw.columns.astype(str)  # 열 이름들을 문자열로 변환
+    df_raw.columns = df_raw.columns.astype(str)
 
-    # '구'와 '이용자수'로 추정되는 열 자동 감지
+    # 구와 이용자수가 포함된 열 찾기
     gu_col = [col for col in df_raw.columns if '구' in col][0]
     user_col = [col for col in df_raw.columns if '이용자수' in col or '이용자 수' in col][0]
 
     df = df_raw[[gu_col, user_col]].copy()
     df.columns = ['구', '이용자수']
-    df = df.dropna()
+    
+    # 구 이름이 '강남구', '종로구' 등으로 끝나는 행만 추출
+    df = df[df['구'].str.endswith('구')]
     df['이용자수'] = pd.to_numeric(df['이용자수'], errors='coerce')
-    return df.dropna()
+    df = df.dropna()
+    return df
 
 df = load_data()
 
@@ -54,7 +73,6 @@ st.pyplot(fig)
 # -------------------
 st.subheader("🗺️ 자치구별 이용자 수 지도")
 
-# 서울시 각 구의 대표 좌표 (위도, 경도)
 sample_locations = {
     "강남구": [37.5172, 127.0473],
     "강동구": [37.5301, 127.1238],
@@ -85,9 +103,9 @@ sample_locations = {
 
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
-# 정규화 함수 (반지름 계산용)
+# 정규화 함수
 def normalize(val, min_val, max_val):
-    return 5 + 15 * ((val - min_val) / (max_val - min_val))  # 반지름: 5~20
+    return 5 + 15 * ((val - min_val) / (max_val - min_val))
 
 min_users, max_users = df['이용자수'].min(), df['이용자수'].max()
 
@@ -117,6 +135,3 @@ st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구
 # -------------------
 st.markdown("---")
 st.caption("🔗 더 많은 AI 자동화 앱은 [https://gptonline.ai/ko/](https://gptonline.ai/ko/)에서 체험해보세요.")
-
-
-
