@@ -24,7 +24,11 @@ set_korean_font()
 # -------------------
 @st.cache_data
 def load_data():
-    df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx", sheet_name="최신 이용자")
+    df = pd.read_excel(
+        "서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx",
+        sheet_name="최신 이용자",
+        header=0  # 첫 번째 행을 열 이름으로 사용
+    )
     df = df[['실거주', '이용자수']].copy()
     df.columns = ['구', '이용자수']
     df.dropna(inplace=True)
