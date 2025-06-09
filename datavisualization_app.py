@@ -8,19 +8,22 @@ import matplotlib.font_manager as fm
 import random
 
 # -------------------
-# 한글 폰트 설정
+# 한글 폰트 설정 (OS별 경로 기반)
 # -------------------
 def set_korean_font():
     try:
         if platform.system() == 'Windows':
-            plt.rc('font', family='Malgun Gothic')
-        elif platform.system() == 'Darwin':
-            plt.rc('font', family='AppleGothic')
-        else:
-            plt.rc('font', family='NanumGothic')
-    except:
-        plt.rc('font', family='DejaVu Sans')
-    plt.rc('axes', unicode_minus=False)
+            font_path = 'C:/Windows/Fonts/malgun.ttf'
+        elif platform.system() == 'Darwin':  # macOS
+            font_path = '/System/Library/Fonts/AppleGothic.ttf'
+        else:  # Linux
+            font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
+
+        font_name = fm.FontProperties(fname=font_path).get_name()
+        plt.rcParams['font.family'] = font_name
+        plt.rcParams['axes.unicode_minus'] = False
+    except Exception as e:
+        st.error(f"폰트 설정 실패: {e}")
 
 set_korean_font()
 
@@ -38,6 +41,7 @@ def load_data():
     df.columns = ['구', '이용자수']
     df.dropna(inplace=True)
     df['이용자수'] = pd.to_numeric(df['이용자수'], errors='coerce')
+    df['구'] = df['구'].astype(str)
     df = df[df['구'].str.endswith('구')]
     return df
 
@@ -64,8 +68,8 @@ st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df.sort_values(by="이용자수", ascending=False)
 fig, ax = plt.subplots(figsize=(12, 6))
 bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
-ax.set_ylabel("도서관 이용자 수")
-ax.set_xlabel("자치구")
+ax.set_ylabel("도서관 이용자 수", fontsize=12)
+ax.set_xlabel("자치구", fontsize=12)
 plt.xticks(rotation=45)
 st.pyplot(fig)
 
@@ -103,14 +107,14 @@ sample_locations = {
     "중랑구": [37.6063, 127.0927]
 }
 
-# 고유 색상 할당
+# 고유 색상 생성
 def generate_color_palette(n):
     random.seed(42)
     return [f"#{random.randint(0, 0xFFFFFF):06x}" for _ in range(n)]
 
 color_palette = dict(zip(df_sorted['구'], generate_color_palette(len(df_sorted))))
 
-# 지도 그리기
+# 지도 생성
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
 def normalize(val, min_val, max_val):
