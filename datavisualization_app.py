@@ -4,17 +4,22 @@ import folium
 from streamlit_folium import folium_static
 import matplotlib.pyplot as plt
 import platform
+import matplotlib.font_manager as fm
+import random
 
 # -------------------
 # 한글 폰트 설정
 # -------------------
 def set_korean_font():
-    if platform.system() == 'Windows':
-        plt.rc('font', family='Malgun Gothic')
-    elif platform.system() == 'Darwin':
-        plt.rc('font', family='AppleGothic')
-    else:
-        plt.rc('font', family='NanumGothic')
+    try:
+        if platform.system() == 'Windows':
+            plt.rc('font', family='Malgun Gothic')
+        elif platform.system() == 'Darwin':
+            plt.rc('font', family='AppleGothic')
+        else:
+            plt.rc('font', family='NanumGothic')
+    except:
+        plt.rc('font', family='DejaVu Sans')
     plt.rc('axes', unicode_minus=False)
 
 set_korean_font()
@@ -27,7 +32,7 @@ def load_data():
     df = pd.read_excel(
         "서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx",
         sheet_name="최신 이용자",
-        header=0  # 첫 번째 행을 열 이름으로 사용
+        header=0
     )
     df = df[['실거주', '이용자수']].copy()
     df.columns = ['구', '이용자수']
@@ -58,8 +63,9 @@ col2.metric("총 이용자 수", f"{int(df['이용자수'].sum()):,}명")
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df.sort_values(by="이용자수", ascending=False)
 fig, ax = plt.subplots(figsize=(12, 6))
-ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
-ax.set_ylabel("이용자 수")
+bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+ax.set_ylabel("도서관 이용자 수")
+ax.set_xlabel("자치구")
 plt.xticks(rotation=45)
 st.pyplot(fig)
 
@@ -97,6 +103,14 @@ sample_locations = {
     "중랑구": [37.6063, 127.0927]
 }
 
+# 고유 색상 할당
+def generate_color_palette(n):
+    random.seed(42)
+    return [f"#{random.randint(0, 0xFFFFFF):06x}" for _ in range(n)]
+
+color_palette = dict(zip(df_sorted['구'], generate_color_palette(len(df_sorted))))
+
+# 지도 그리기
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
 def normalize(val, min_val, max_val):
@@ -112,12 +126,14 @@ for _, row in df.iterrows():
             location=sample_locations[gu],
             radius=normalize(users, min_users, max_users),
             popup=f"{gu}: {int(users):,}명",
-            color='blue',
+            tooltip=gu,
+            color=color_palette[gu],
             fill=True,
-            fill_opacity=0.6
+            fill_color=color_palette[gu],
+            fill_opacity=0.7
         ).add_to(m)
 
-folium_static(m, width=1000)
+folium_static(m, width=1000, height=600)
 
 # -------------------
 # 최다 이용 구 요약
@@ -130,3 +146,4 @@ st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구
 # -------------------
 st.markdown("---")
 st.caption("🔗 더 많은 AI 분석 템플릿은 [https://gptonline.ai/ko/](https://gptonline.ai/ko/)에서 확인하세요.")
+
