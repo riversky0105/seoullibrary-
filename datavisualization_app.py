@@ -1,9 +1,15 @@
-import streamlit as st
 import pandas as pd
-import folium
-from streamlit_folium import folium_static
-import matplotlib.pyplot as plt
+import numpy as np
 import platform
+import matplotlib.pyplot as plt
+import folium
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+import streamlit as st
+from streamlit_folium import folium_static
 
 # -------------------
 # 한글 폰트 설정
@@ -121,8 +127,51 @@ folium_static(m, width=1000)
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구']}`이며, 총 `{int(top_gu['이용자수']):,}명`이 이용했습니다.**")
 
-# -------------------
-# 푸터
-# -------------------
 
+
+# -------------------
+#머신러닝 코드
+
+# 1. CSV 파일 읽기
+file_path = '공공도서관_20250611101301.csv'  # 실제 파일 경로로 수정 필요
+df = pd.read_csv(file_path, encoding='utf-8')  # 인코딩 문제 있으면 'cp949' 또는 'utf-8-sig' 사용
+
+# 2. 열 이름 수동 지정
+df.columns = [
+    '자치구명', '개소 수(계)', '좌석수(계)', '좌석수(도서)', '좌석수(자료열람)', '좌석수(기타)',
+    '자료수(도서)', '자료수(비도서)', '도서관 방문자수',
+    '직원수(계)', '직원수(남)', '직원수(여)', '예산(백만원)'
+]
+
+# 3. 숫자형 컬럼 처리 (쉼표 제거 + 숫자 변환)
+for col in df.columns[1:]:
+    df[col] = df[col].astype(str).str.replace(',', '').str.strip()
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# 4. 결측값 처리 (NaN → 0)
+df.fillna(0, inplace=True)
+
+# 5. 입력 변수(X), 타겟 변수(y) 정의
+X = df.drop(columns=['자치구명', '도서관 방문자수'])  # 자치구명은 학습에 사용하지 않음
+y = df['도서관 방문자수']
+
+# 6. 학습용/테스트용 데이터 분리
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 7. 랜덤 포레스트 모델 학습
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# 8. 예측 및 성능 평가
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"📊 평균 제곱 오차(MSE): {mse:.2f}")
+print(f"📈 결정계수(R²): {r2:.4f}")
+
+# 9. 중요 변수 확인
+feature_importance = pd.Series(model.feature_importances_, index=X.columns)
+print("\n🔍 변수 중요도:")
+print(feature_importance.sort_values(ascending=False))
 
