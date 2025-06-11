@@ -133,7 +133,7 @@ st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구
 #머신러닝 코드
 
 # 1. CSV 파일 읽기
-file_path = '공공도서관_20250611101301.csv'  # 실제 파일 경로로 수정 필요
+file_path = '공공도서관 자치구별 통계 파일.csv'  # 실제 파일 경로로 수정 필요
 df = pd.read_csv(file_path, encoding='utf-8')  # 인코딩 문제 있으면 'cp949' 또는 'utf-8-sig' 사용
 
 # 2. 열 이름 수동 지정
