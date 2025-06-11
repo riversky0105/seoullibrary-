@@ -99,7 +99,7 @@ st.subheader("🤖 머신러닝 기반 도서관 방문자 수 예측")
 file_path = "공공도서관 자치구별 통계 파일.csv"
 
 # 데이터 로드
-df_stat = pd.read_csv(file_path, encoding='utf-8')
+df_stat = pd.read_csv(file_path, encoding='cp949')  # ✅ 한글 Windows 인코딩
 df_stat.columns = [
     '자치구명', '개소 수(계)', '좌석수(계)', '좌석수(도서)', '좌석수(자료열람)', '좌석수(기타)',
     '자료수(도서)', '자료수(비도서)', '도서관 방문자수',
