@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 한글 폰트 자동 설정 (OS별 대응)
+# 한글 폰트 설정 (전체 적용 + fontproperties 반환용)
 # -----------------------
 def set_korean_font():
     system_name = platform.system()
@@ -25,15 +25,17 @@ def set_korean_font():
     else:  # Linux (Streamlit Cloud 등)
         font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
     
-    if os.path.exists(font_path):
-        font_name = font_manager.FontProperties(fname=font_path).get_name()
-        plt.rc('font', family=font_name)
+    if not os.path.exists(font_path):
+        st.warning("⚠️ 한글 폰트 파일을 찾을 수 없습니다. 기본 sans-serif로 표시됩니다.")
+        return None
     else:
-        plt.rc('font', family='sans-serif')  # 폰트 없으면 기본 sans-serif 사용
-    
-    mpl.rcParams['axes.unicode_minus'] = False  # 마이너스 깨짐 방지
+        font_prop = font_manager.FontProperties(fname=font_path)
+        font_name = font_prop.get_name()
+        plt.rc('font', family=font_name)
+        mpl.rcParams['axes.unicode_minus'] = False
+        return font_prop
 
-set_korean_font()
+FONT_PROP = set_korean_font()
 
 # -----------------------
 # Streamlit 설정
@@ -42,7 +44,7 @@ st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="w
 st.title("📚 서울시 도서관 이용자 수 분석 및 머신러닝 예측")
 
 # -----------------------
-# 자치구별 이용자 수 데이터 로드
+# 데이터 로드 함수
 # -----------------------
 @st.cache_data
 def load_user_data():
@@ -61,10 +63,17 @@ df_users = load_user_data()
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
+
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
-ax.set_ylabel("이용자 수")
-plt.xticks(rotation=45)
+ax.set_ylabel("이용자 수", fontproperties=FONT_PROP)
+ax.set_xlabel("자치구", fontproperties=FONT_PROP)
+ax.set_title("서울시 자치구별 도서관 이용자 수", fontproperties=FONT_PROP)
+ax.tick_params(axis='x', rotation=45)
+
+for label in ax.get_xticklabels() + ax.get_yticklabels():
+    label.set_fontproperties(FONT_PROP)
+
 st.pyplot(fig)
 
 # -----------------------
@@ -106,71 +115,60 @@ top_gu = df_sorted.iloc[0]
 st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구']}`이며, 총 `{int(top_gu['이용자수']):,}명`이 이용했습니다.**")
 
 # -----------------------
-# 머신러닝 데이터 불러오기
+# 머신러닝 데이터 로드
 # -----------------------
 @st.cache_data
 def load_ml_data():
     file_path = "공공도서관 자치구별 통계 파일.csv"
     df = pd.read_csv(file_path, encoding='cp949', header=1)
-    
-    # '소계' 행 제거
     df = df[df.iloc[:,0] != '소계']
-    
-    # 컬럼명 설정
     df.columns = [
         '자치구명', '개소수', '좌석수', '자료수_도서', '자료수_비도서', '자료수_연속간행물',
         '도서관 방문자수', '연간대출책수', '직원수', '직원수_남', '직원수_여', '예산'
     ]
-    
-    # 숫자형 변환
     for col in df.columns[1:]:
         df[col] = df[col].astype(str).str.replace(',', '').astype(float)
-        
     return df
 
-# -----------------------
-# 머신러닝 모델 훈련 및 결과 출력
-# -----------------------
 try:
     df_stat = load_ml_data()
 
     st.subheader("📄 공공도서관 자치구별 통계 데이터 미리보기")
     st.dataframe(df_stat)
 
-    # 입력/출력 나누기
+    # 머신러닝 모델 훈련
     X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
     y = df_stat['도서관 방문자수']
     
-    # 학습 및 예측
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     
-    # 성능 지표 출력
+    # 평가 지표
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     
     st.markdown(f"✅ **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
     st.markdown(f"✅ **결정계수 (R²): `{r2:.4f}`**")
-    
-    # -----------------------
-    # 변수 중요도 시각화
-    # -----------------------
+
+    # 변수 중요도 시각화 (폰트 직접 적용)
     st.subheader("🔍 변수 중요도")
     importance = pd.Series(model.feature_importances_, index=X.columns)
     
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     importance.sort_values().plot(kind='barh', ax=ax2, color='skyblue')
-    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, pad=15)
-    ax2.set_xlabel("중요도", fontsize=12)
-    ax2.set_ylabel("변수 이름", fontsize=12)
+    ax2.set_title("📌 RandomForest 변수 중요도", fontproperties=FONT_PROP, fontsize=16, pad=15)
+    ax2.set_xlabel("중요도", fontproperties=FONT_PROP)
+    ax2.set_ylabel("변수 이름", fontproperties=FONT_PROP)
     
+    for label in ax2.get_xticklabels() + ax2.get_yticklabels():
+        label.set_fontproperties(FONT_PROP)
+
     st.pyplot(fig2)
-    
+
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
-
 
 
 
