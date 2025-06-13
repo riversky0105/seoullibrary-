@@ -12,7 +12,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
-st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 # -----------------------
 # 한글 폰트 설정 (전체 적용 + fontproperties 반환용)
 # -----------------------
@@ -170,9 +169,3 @@ try:
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
-
-
-
-
-
-
