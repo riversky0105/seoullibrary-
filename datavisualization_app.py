@@ -2,10 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-import platform
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import matplotlib.font_manager as font_manager
+import matplotlib.font_manager as fm
 import folium
 from streamlit_folium import folium_static
 from sklearn.model_selection import train_test_split
@@ -13,27 +12,31 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 한글 폰트 설정 (직접 업로드한 폰트 사용)
+# 1. 한글 폰트 강제 설정
 # -----------------------
 def set_korean_font():
-    font_path = os.path.join(os.getcwd(), 'NanumGothicCoding.ttf')
+    font_path = os.path.join(os.getcwd(), "NanumGothicCoding.ttf")
     if os.path.exists(font_path):
-        font_name = font_manager.FontProperties(fname=font_path).get_name()
+        font_prop = fm.FontProperties(fname=font_path)
+        font_name = font_prop.get_name()
+        mpl.rc('font', family=font_name)
         plt.rcParams['font.family'] = font_name
         mpl.rcParams['axes.unicode_minus'] = False
+        st.write(f"✅ 한글 폰트 적용 완료: {font_name}")
     else:
-        st.warning("❗ NanumGothicCoding.ttf 폰트 파일이 존재하지 않습니다. 기본 폰트를 사용합니다.")
+        st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본폰트 사용 중.")
 
+# 앱 시작 시 먼저 실행
 set_korean_font()
 
 # -----------------------
-# Streamlit 설정
+# 2. Streamlit 페이지 설정
 # -----------------------
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
-st.title("📚 서울시 도서관 이용자 수 분석 및 머신러닝 예측")
+st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 
 # -----------------------
-# 자치구별 이용자 수 데이터 로드
+# 3. 자치구별 이용자 수 데이터 로드
 # -----------------------
 @st.cache_data
 def load_user_data():
@@ -48,18 +51,20 @@ def load_user_data():
 df_users = load_user_data()
 
 # -----------------------
-# 바 차트 시각화
+# 4. 바 차트 시각화
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+ax.set_title("📌 자치구별 이용자 수", fontsize=16)
 ax.set_ylabel("이용자 수")
+ax.set_xlabel("자치구")
 plt.xticks(rotation=45)
 st.pyplot(fig)
 
 # -----------------------
-# 지도 시각화
+# 5. 지도 시각화
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -91,62 +96,52 @@ for _, row in df_users.iterrows():
 folium_static(m)
 
 # -----------------------
-# 최다 이용 구 출력
+# 6. 최다 이용 구 출력
 # -----------------------
 top_gu = df_sorted.iloc[0]
-st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구']}`이며, 총 `{int(top_gu['이용자수']):,}명`이 이용했습니다.**")
+st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{int(top_gu['이용자수']):,}명`** 입니다.")
 
 # -----------------------
-# 머신러닝 데이터 불러오기
+# 7. 머신러닝 준비 및 결과
 # -----------------------
 @st.cache_data
 def load_ml_data():
-    file_path = "공공도서관 자치구별 통계 파일.csv"
-    df = pd.read_csv(file_path, encoding='cp949', header=1)
+    df = pd.read_csv("공공도서관 자치구별 통계 파일.csv", encoding='cp949', header=1)
     df = df[df.iloc[:,0] != '소계']
     df.columns = [
-        '자치구명', '개소수', '좌석수', '자료수_도서', '자료수_비도서', '자료수_연속간행물',
-        '도서관 방문자수', '연간대출책수', '직원수', '직원수_남', '직원수_여', '예산'
+        '자치구명','개소수','좌석수','자료수_도서','자료수_비도서','자료수_연속간행물',
+        '도서관 방문자수','연간대출책수','직원수','직원수_남','직원수_여','예산'
     ]
     for col in df.columns[1:]:
         df[col] = df[col].astype(str).str.replace(',', '').astype(float)
     return df
 
-# -----------------------
-# 머신러닝 모델 훈련 및 결과 출력
-# -----------------------
 try:
     df_stat = load_ml_data()
-
-    st.subheader("📄 공공도서관 자치구별 통계 데이터 미리보기")
+    st.subheader("📄 통계 데이터 미리보기")
     st.dataframe(df_stat)
 
-    X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
+    X = df_stat.drop(columns=['자치구명','도서관 방문자수'])
     y = df_stat['도서관 방문자수']
-    
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    
+
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
-    
-    st.markdown(f"✅ **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
-    st.markdown(f"✅ **결정계수 (R²): `{r2:.4f}`**")
-    
-    # 변수 중요도 시각화
-    st.subheader("🔍 변수 중요도")
+    st.markdown(f"✅ **MSE**: `{mse:,.0f}`  |  **R²**: `{r2:.4f}`")
+
+    st.subheader("🔍 변수 중요도 분석")
     importance = pd.Series(model.feature_importances_, index=X.columns)
-    
     fig2, ax2 = plt.subplots(figsize=(10, 6))
-    importance.sort_values().plot(kind='barh', ax=ax2, color='skyblue')
-    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, pad=15)
+    importance.sort_values().plot.barh(ax=ax2, color='skyblue')
+    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16)
     ax2.set_xlabel("중요도", fontsize=12)
     ax2.set_ylabel("변수 이름", fontsize=12)
-    
     st.pyplot(fig2)
-    
+
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
 
