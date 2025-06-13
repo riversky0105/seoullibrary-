@@ -13,20 +13,16 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 사용자 지정 폰트 적용 함수
+# 한글 폰트 설정 (직접 업로드한 폰트 사용)
 # -----------------------
 def set_korean_font():
-    font_file = "NanumGothicCoding.ttf"  # 파일명은 스트림릿 폴더에 업로드한 폰트명
-    font_path = os.path.join(os.getcwd(), font_file)
-    
+    font_path = os.path.join(os.getcwd(), 'NanumGothicCoding.ttf')
     if os.path.exists(font_path):
         font_name = font_manager.FontProperties(fname=font_path).get_name()
-        plt.rc('font', family=font_name)
+        plt.rcParams['font.family'] = font_name
+        mpl.rcParams['axes.unicode_minus'] = False
     else:
-        st.warning("⚠️ 한글 폰트 파일이 존재하지 않습니다. 기본 폰트를 사용합니다.")
-        plt.rc('font', family='sans-serif')
-    
-    mpl.rcParams['axes.unicode_minus'] = False
+        st.warning("❗ NanumGothicCoding.ttf 폰트 파일이 존재하지 않습니다. 기본 폰트를 사용합니다.")
 
 set_korean_font()
 
@@ -107,21 +103,17 @@ st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구
 def load_ml_data():
     file_path = "공공도서관 자치구별 통계 파일.csv"
     df = pd.read_csv(file_path, encoding='cp949', header=1)
-    
     df = df[df.iloc[:,0] != '소계']
-    
     df.columns = [
         '자치구명', '개소수', '좌석수', '자료수_도서', '자료수_비도서', '자료수_연속간행물',
         '도서관 방문자수', '연간대출책수', '직원수', '직원수_남', '직원수_여', '예산'
     ]
-    
     for col in df.columns[1:]:
         df[col] = df[col].astype(str).str.replace(',', '').astype(float)
-        
     return df
 
 # -----------------------
-# 머신러닝 모델 훈련 및 시각화
+# 머신러닝 모델 훈련 및 결과 출력
 # -----------------------
 try:
     df_stat = load_ml_data()
@@ -157,4 +149,5 @@ try:
     
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
 
