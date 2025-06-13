@@ -93,6 +93,8 @@ folium_static(m)
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구']}`이며, 총 `{int(top_gu['이용자수']):,}명`이 이용했습니다.**")
 
+# ... (이전 코드 동일)
+
 # -------------------
 # 머신러닝 예측
 # -------------------
@@ -100,14 +102,13 @@ st.subheader("🤖 머신러닝 기반 도서관 방문자 수 예측")
 
 @st.cache_data
 def load_ml_data():
-    # 📌 헤더가 두 번째 줄에 있으므로 header=1 사용
     file_path = "공공도서관 자치구별 통계 파일.csv"
     df = pd.read_csv(file_path, encoding='cp949', header=1)
     
     # '소계' 행 제거
     df = df[df.iloc[:,0] != '소계']
     
-    # 컬럼명 정리 (자동 생성된 경우 그대로 사용)
+    # 컬럼명 설정
     df.columns = [
         '자치구명', '개소수', '좌석수', '자료수_도서', '자료수_비도서', '자료수_연속간행물',
         '도서관 방문자수', '연간대출책수', '직원수', '직원수_남', '직원수_여', '예산'
@@ -139,12 +140,16 @@ try:
     st.markdown(f"📊 **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
     st.markdown(f"📈 **결정계수 (R²): `{r2:.4f}`**")
     
-    # 변수 중요도 시각화
+    # 변수 중요도 시각화 (축 이름 추가 버전)
     st.subheader("🔍 변수 중요도")
     importance = pd.Series(model.feature_importances_, index=X.columns)
-    fig2, ax2 = plt.subplots(figsize=(8, 5))
+    
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
     importance.sort_values().plot(kind='barh', ax=ax2, color='skyblue')
-    ax2.set_title("📌 RandomForest 변수 중요도")
+    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, pad=15)
+    ax2.set_xlabel("중요도 (Feature Importance)", fontsize=12)
+    ax2.set_ylabel("변수 이름 (Feature Name)", fontsize=12)
+    
     st.pyplot(fig2)
     
 except Exception as e:
