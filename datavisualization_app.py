@@ -1,20 +1,44 @@
+import streamlit as st
+import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import font_manager, rc
 import matplotlib as mpl
+import platform
+import os
+from matplotlib import font_manager
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+st.set_page_config(layout="wide")
+
+st.title("📚 공공도서관 방문자수 예측 시스템")
 
 # -----------------------
-# 한글 폰트 설정 (깨짐 방지)
+# 한글 폰트 자동 설정 (OS별 대응)
 # -----------------------
-font_path = "C:/Windows/Fonts/malgun.ttf"  # 윈도우 기본 한글 폰트 경로
-font_name = font_manager.FontProperties(fname=font_path).get_name()
-plt.rc('font', family=font_name)
-mpl.rcParams['axes.unicode_minus'] = False  # 마이너스 깨짐 방지
+def set_korean_font():
+    system_name = platform.system()
+    
+    if system_name == 'Windows':
+        font_path = "C:/Windows/Fonts/malgun.ttf"
+    elif system_name == 'Darwin':  # macOS
+        font_path = "/System/Library/Fonts/AppleGothic.ttf"
+    else:  # Linux (Streamlit Cloud 등)
+        font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+    
+    if os.path.exists(font_path):
+        font_name = font_manager.FontProperties(fname=font_path).get_name()
+        plt.rc('font', family=font_name)
+    else:
+        plt.rc('font', family='sans-serif')  # 폰트 없으면 기본 sans-serif 사용
+    
+    mpl.rcParams['axes.unicode_minus'] = False  # 마이너스 깨짐 방지
+
+set_korean_font()
 
 # -----------------------
-# 머신러닝 예측 + 시각화
+# 데이터 불러오기 함수
 # -----------------------
-st.subheader("🤖 머신러닝 기반 도서관 방문자 수 예측")
-
 @st.cache_data
 def load_ml_data():
     file_path = "공공도서관 자치구별 통계 파일.csv"
@@ -35,8 +59,14 @@ def load_ml_data():
         
     return df
 
+# -----------------------
+# 메인 로직
+# -----------------------
 try:
     df_stat = load_ml_data()
+
+    st.subheader("📊 데이터 미리보기")
+    st.dataframe(df_stat)
 
     # 입력/출력 나누기
     X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
@@ -52,10 +82,12 @@ try:
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     
-    st.markdown(f"📊 **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
-    st.markdown(f"📈 **결정계수 (R²): `{r2:.4f}`**")
+    st.markdown(f"✅ **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
+    st.markdown(f"✅ **결정계수 (R²): `{r2:.4f}`**")
     
-    # 변수 중요도 시각화 (한글 축 추가, 폰트 설정)
+    # -----------------------
+    # 변수 중요도 시각화
+    # -----------------------
     st.subheader("🔍 변수 중요도")
     importance = pd.Series(model.feature_importances_, index=X.columns)
     
@@ -69,5 +101,6 @@ try:
     
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
 
 
