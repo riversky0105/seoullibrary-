@@ -1,4 +1,8 @@
 import streamlit as st
+
+# ✅ 반드시 가장 먼저 위치해야 함!
+st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
+
 import pandas as pd
 import numpy as np
 import os
@@ -30,9 +34,8 @@ def set_korean_font():
 set_korean_font()
 
 # -----------------------
-# 2. Streamlit 페이지 설정
+# 2. Streamlit 제목
 # -----------------------
-st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 
 # -----------------------
@@ -144,5 +147,6 @@ try:
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
 
 
