@@ -16,7 +16,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 # 사용자 지정 폰트 적용 함수
 # -----------------------
 def set_korean_font():
-    font_file = "NanumGothic.ttf"  # 파일명은 스트림릿 폴더에 업로드한 폰트명
+    font_file = "NanumGothicCoding.ttf"  # 파일명은 스트림릿 폴더에 업로드한 폰트명
     font_path = os.path.join(os.getcwd(), font_file)
     
     if os.path.exists(font_path):
