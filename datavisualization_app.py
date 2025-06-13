@@ -102,38 +102,54 @@ st.subheader("🤖 머신러닝 기반 도서관 방문자 수 예측")
 def load_ml_data():
     file_path = "공공도서관 자치구별 통계 파일.csv"
     df = pd.read_csv(file_path, encoding='cp949')
-    df.columns = [
+    
+    # 컬럼 자동 추출
+    default_columns = [
         '자치구명', '개소 수(계)', '좌석수(계)', '좌석수(도서)', '좌석수(자료열람)', '좌석수(기타)',
         '자료수(도서)', '자료수(비도서)', '도서관 방문자수',
         '직원수(계)', '직원수(남)', '직원수(여)', '예산(백만원)'
     ]
-    for col in df.columns[1:]:
-        df[col] = df[col].astype(str).str.replace(',', '').astype(float)
+    
+    if len(df.columns) == len(default_columns):
+        df.columns = default_columns
+    else:
+        st.warning("⚠️ CSV 파일의 컬럼 개수가 예상과 다릅니다. 자동으로 기존 컬럼명을 유지합니다.")
+        st.write(df.head())
+    
+    # 숫자형 컬럼 처리
+    for col in df.columns:
+        if col != '자치구명':
+            df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
     df.fillna(0, inplace=True)
+    
     return df
 
 df_stat = load_ml_data()
 
-X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
-y = df_stat['도서관 방문자수']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+if '도서관 방문자수' in df_stat.columns:
+    X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
+    y = df_stat['도서관 방문자수']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
 
-st.markdown(f"📊 **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
-st.markdown(f"📈 **결정계수 (R²): `{r2:.4f}`**")
+    st.markdown(f"📊 **평균 제곱 오차 (MSE): `{mse:,.0f}`**")
+    st.markdown(f"📈 **결정계수 (R²): `{r2:.4f}`**")
 
-# 변수 중요도 시각화
-st.subheader("🔍 변수 중요도")
-importance = pd.Series(model.feature_importances_, index=X.columns)
-fig2, ax2 = plt.subplots(figsize=(8, 5))
-importance.sort_values().plot(kind='barh', ax=ax2, color='skyblue')
-ax2.set_title("📌 RandomForest 변수 중요도")
-st.pyplot(fig2)
+    # 변수 중요도 시각화
+    st.subheader("🔍 변수 중요도")
+    importance = pd.Series(model.feature_importances_, index=X.columns)
+    fig2, ax2 = plt.subplots(figsize=(8, 5))
+    importance.sort_values().plot(kind='barh', ax=ax2, color='skyblue')
+    ax2.set_title("📌 RandomForest 변수 중요도")
+    st.pyplot(fig2)
+else:
+    st.error("❌ '도서관 방문자수' 컬럼이 데이터에 없습니다. CSV 파일을 확인하세요.")
 
 
