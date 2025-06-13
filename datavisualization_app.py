@@ -1,37 +1,49 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 import platform
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.font_manager as font_manager
 import folium
 from streamlit_folium import folium_static
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
-# -------------------
-# 한글 폰트 설정
-# -------------------
+# -----------------------
+# 한글 폰트 자동 설정 (OS별 대응)
+# -----------------------
 def set_korean_font():
-    if platform.system() == 'Windows':
-        plt.rc('font', family='Malgun Gothic')
-    elif platform.system() == 'Darwin':
-        plt.rc('font', family='AppleGothic')
+    system_name = platform.system()
+    
+    if system_name == 'Windows':
+        font_path = "C:/Windows/Fonts/malgun.ttf"
+    elif system_name == 'Darwin':  # macOS
+        font_path = "/System/Library/Fonts/AppleGothic.ttf"
+    else:  # Linux (Streamlit Cloud 등)
+        font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+    
+    if os.path.exists(font_path):
+        font_name = font_manager.FontProperties(fname=font_path).get_name()
+        plt.rc('font', family=font_name)
     else:
-        plt.rc('font', family='NanumGothic')
-    plt.rc('axes', unicode_minus=False)
+        plt.rc('font', family='sans-serif')  # 폰트 없으면 기본 sans-serif 사용
+    
+    mpl.rcParams['axes.unicode_minus'] = False  # 마이너스 깨짐 방지
 
 set_korean_font()
 
-# -------------------
-# Streamlit 페이지 기본 설정
-# -------------------
+# -----------------------
+# Streamlit 설정
+# -----------------------
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 st.title("📚 서울시 도서관 이용자 수 분석 및 머신러닝 예측")
 
-# -------------------
+# -----------------------
 # 자치구별 이용자 수 데이터 로드
-# -------------------
+# -----------------------
 @st.cache_data
 def load_user_data():
     df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx", sheet_name="최신 이용자")
@@ -44,9 +56,9 @@ def load_user_data():
 
 df_users = load_user_data()
 
-# -------------------
+# -----------------------
 # 바 차트 시각화
-# -------------------
+# -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -55,9 +67,9 @@ ax.set_ylabel("이용자 수")
 plt.xticks(rotation=45)
 st.pyplot(fig)
 
-# -------------------
+# -----------------------
 # 지도 시각화
-# -------------------
+# -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
 sample_locations = {
@@ -87,39 +99,14 @@ for _, row in df_users.iterrows():
 
 folium_static(m)
 
-# -------------------
+# -----------------------
 # 최다 이용 구 출력
-# -------------------
+# -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ **가장 도서관 이용자 수가 많은 구는 `{top_gu['구']}`이며, 총 `{int(top_gu['이용자수']):,}명`이 이용했습니다.**")
 
-
-
 # -----------------------
-# 한글 폰트 자동 설정 (OS별 대응)
-# -----------------------
-def set_korean_font():
-    system_name = platform.system()
-    
-    if system_name == 'Windows':
-        font_path = "C:/Windows/Fonts/malgun.ttf"
-    elif system_name == 'Darwin':  # macOS
-        font_path = "/System/Library/Fonts/AppleGothic.ttf"
-    else:  # Linux (Streamlit Cloud 등)
-        font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
-    
-    if os.path.exists(font_path):
-        font_name = font_manager.FontProperties(fname=font_path).get_name()
-        plt.rc('font', family=font_name)
-    else:
-        plt.rc('font', family='sans-serif')  # 폰트 없으면 기본 sans-serif 사용
-    
-    mpl.rcParams['axes.unicode_minus'] = False  # 마이너스 깨짐 방지
-
-set_korean_font()
-
-# -----------------------
-# 데이터 불러오기 함수
+# 머신러닝 데이터 불러오기
 # -----------------------
 @st.cache_data
 def load_ml_data():
@@ -142,12 +129,12 @@ def load_ml_data():
     return df
 
 # -----------------------
-# 메인 로직
+# 머신러닝 모델 훈련 및 결과 출력
 # -----------------------
 try:
     df_stat = load_ml_data()
 
-    st.subheader("📊 데이터 미리보기")
+    st.subheader("📄 공공도서관 자치구별 통계 데이터 미리보기")
     st.dataframe(df_stat)
 
     # 입력/출력 나누기
