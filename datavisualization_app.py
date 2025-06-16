@@ -47,7 +47,25 @@ df_stat = load_ml_data()
 df_users = df_stat[['자치구명','도서관 방문자수']].copy()
 df_users.columns = ['구','이용자수']
 df_users['이용자수'] = df_users['이용자수'].astype(int)
-df_users_sorted = df_users.sort_values(by='이용자수', ascending=False).re화")
+df_users_sorted = df_users.sort_values(by='이용자수', ascending=False).reset_index(drop=True)
+
+# 자치구별 이용자 수 시각화
+st.subheader("📊 자치구별 도서관 이용자 수")
+st.markdown("서울시 각 자치구의 도서관 방문자 수를 시각화한 그래프입니다.")
+
+fig, ax = plt.subplots(figsize=(12, 6))
+ax.bar(df_users_sorted['구'], df_users_sorted['이용자수'], color='skyblue')
+ax.set_title("📌 자치구별 이용자 수", fontproperties=font_prop)
+ax.set_xlabel("자치구", fontproperties=font_prop)
+ax.set_ylabel("이용자 수", fontproperties=font_prop)
+ax.set_xticks(range(len(df_users_sorted)))
+ax.set_xticklabels(df_users_sorted['구'], rotation=45, fontproperties=font_prop)
+yticks = ax.get_yticks()
+ax.set_yticklabels([f"{int(t):,}" for t in yticks], fontproperties=font_prop)
+st.pyplot(fig)
+
+# 지도 시각화
+st.subheader("🗺️ 서울시 자치구 도서관 이용자 수 지도")
 
 geo_url = "https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json"
 res = requests.get(geo_url)
