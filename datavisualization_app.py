@@ -97,7 +97,7 @@ folium.LayerControl().add_to(m)
 folium_static(m)
 
 top = df_users_sorted.iloc[0]
-st.success(f"✅ 도서관을 가장 많이 이용한 구는 **{top['구']}**, 총 **{top['이용자수']:,}명**이에요!")
+st.success(f"✅ 도서관을 가장 많이 이용한 구는 **{top['구']}**입니다, 이용자 수는 총 **{top['이용자수']:,}명**입니다.")
 
 # 🔍 변수 중요도 분석
 st.subheader("🔍 변수 중요도 분석")
