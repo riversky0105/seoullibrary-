@@ -1,6 +1,4 @@
 import streamlit as st
-
-# ✅ 가장 먼저 실행
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 import pandas as pd
@@ -15,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.ticker import FuncFormatter
+import requests
 
 # -----------------------
 # 1. 한글 폰트 설정
@@ -29,12 +28,7 @@ else:
     st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본폰트 사용 중.")
 
 # -----------------------
-# 2. 제목
-# -----------------------
-st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
-
-# -----------------------
-# 3. 데이터 로드
+# 2. 데이터 로드
 # -----------------------
 @st.cache_data
 def load_ml_data():
@@ -51,42 +45,37 @@ def load_ml_data():
 df_stat = load_ml_data()
 
 # -----------------------
-# 4. 통계 데이터 표시 (도서관 방문자수 기준 정렬)
+# 3. 통계 데이터 표시
 # -----------------------
-st.subheader("📄 자치구별 통계 데이터 (방문자 수 기준 정렬)")
-df_stat_sorted = df_stat.sort_values(by='도서관 방문자수', ascending=False)
-st.dataframe(df_stat_sorted)
+st.subheader("📄 자치구별 통계 데이터")
+st.dataframe(df_stat)
 
 # -----------------------
-# 5. 자치구별 도서관 이용자 수 그래프
+# 4. 자치구별 도서관 이용자 수 그래프
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
-
-df_users = df_stat_sorted[['자치구명', '도서관 방문자수']].copy()
+df_users = df_stat[['자치구명', '도서관 방문자수']].copy()
 df_users.columns = ['구', '이용자수']
 df_users['이용자수'] = df_users['이용자수'].astype(int)
 
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.bar(df_users['구'], df_users['이용자수'], color='skyblue')
-
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
 ax.set_ylabel("이용자 수", fontproperties=font_prop)
 ax.set_xticks(range(len(df_users)))
 ax.set_xticklabels(df_users['구'], rotation=45, fontproperties=font_prop)
-
-# ✅ y축 숫자 자연수로 표시
 y_ticks = ax.get_yticks()
 ax.set_yticks(y_ticks)
-ax.set_yticklabels([f"{int(tick):,}" for tick in y_ticks], fontproperties=font_prop)
-
+ax.set_yticklabels([f"{int(t):,}" for t in y_ticks], fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 6. 지도 시각화 (원 크기 확대)
+# 5. 지도 시각화 (서울시 경계 GeoJSON 적용)
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
+# 자치구 중심 좌표
 sample_locations = {
     "강남구": [37.5172, 127.0473], "강동구": [37.5301, 127.1238], "강북구": [37.6396, 127.0256],
     "강서구": [37.5509, 126.8495], "관악구": [37.4784, 126.9516], "광진구": [37.5385, 127.0823],
@@ -99,18 +88,37 @@ sample_locations = {
     "중랑구": [37.6063, 127.0927]
 }
 
+# 지도 생성
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
-min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 
+# ✅ 서울시 GeoJSON 경계 표시
+geo_url = "https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json"
+try:
+    response = requests.get(geo_url)
+    seoul_geo = response.json()
+
+    folium.GeoJson(
+        seoul_geo,
+        name="서울시 경계",
+        style_function=lambda x: {
+            'color': 'gray',
+            'weight': 2,
+            'fillOpacity': 0
+        }
+    ).add_to(m)
+except Exception as e:
+    st.warning(f"⚠️ 서울시 GeoJSON 불러오기 실패: {e}")
+
+# 자치구별 이용자 수 시각화 (원)
+min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 for _, row in df_users.iterrows():
     gu = row['구']
     if gu in sample_locations:
         val = row['이용자수']
-        norm_val = (val - min_val) / (max_val - min_val)
-        radius = 10 + 30 * norm_val  # ✅ 겹치지 않게 확대
+        norm = (val - min_val) / (max_val - min_val)
         folium.CircleMarker(
             location=sample_locations[gu],
-            radius=radius,
+            radius=10 + 30 * norm,
             popup=f"{gu}: {val:,}명",
             color='blue',
             fill=True,
@@ -118,16 +126,17 @@ for _, row in df_users.iterrows():
             fill_opacity=0.6
         ).add_to(m)
 
+folium.LayerControl().add_to(m)
 folium_static(m)
 
 # -----------------------
-# 7. 최다 이용 구 출력
+# 6. 최다 이용 구 출력
 # -----------------------
-top_gu = df_users.iloc[0]
+top_gu = df_users.loc[df_users['이용자수'].idxmax()]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{top_gu['이용자수']:,}명`** 입니다.")
 
 # -----------------------
-# 8. 머신러닝 + 변수 중요도
+# 7. 머신러닝 + 변수 중요도
 # -----------------------
 X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
 y = df_stat['도서관 방문자수']
