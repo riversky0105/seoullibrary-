@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ✅ 가장 먼저 실행해야 함
+# ✅ 반드시 가장 먼저 위치해야 함!
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 import pandas as pd
@@ -37,21 +37,26 @@ st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 # 3. 데이터 로드
 # -----------------------
 @st.cache_data
-def load_user_data():
-    df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx", sheet_name="최신 이용자")
-    df = df[['실거주', '이용자수']].copy()
-    df.columns = ['구', '이용자수']
-    df['이용자수'] = pd.to_numeric(df['이용자수'], errors='coerce')
-    df.dropna(inplace=True)
-    df = df[df['구'].str.endswith('구')]
+def load_ml_data():
+    df = pd.read_csv("공공도서관 자치구별 통계 파일.csv", encoding='cp949', header=1)
+    df = df[df.iloc[:, 0] != '소계']
+    df.columns = [
+        '자치구명', '개소수', '좌석수', '자료수_도서', '자료수_비도서', '자료수_연속간행물',
+        '도서관 방문자수', '연간대출책수', '직원수', '직원수_남', '직원수_여', '예산'
+    ]
+    for col in df.columns[1:]:
+        df[col] = df[col].astype(str).str.replace(',', '').astype(float)
     return df
 
-df_users = load_user_data()
+df_stat = load_ml_data()
 
 # -----------------------
-# 4. 바 차트
+# 4. 자치구별 도서관 이용자 수 시각화 (CSV 기반으로 수정됨)
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
+
+df_users = df_stat[['자치구명', '도서관 방문자수']].copy()
+df_users.columns = ['구', '이용자수']
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -67,7 +72,7 @@ ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 (색상: 파란색 고정)
+# 5. 지도 시각화
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -103,58 +108,36 @@ for _, row in df_users.iterrows():
 folium_static(m)
 
 # -----------------------
-# 6. 최다 이용 구
+# 6. 최다 이용 구 출력
 # -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{int(top_gu['이용자수']):,}명`** 입니다.")
 
 # -----------------------
-# 7. 머신러닝 + 변수 중요도
+# 7. 머신러닝 예측 및 변수 중요도
 # -----------------------
-@st.cache_data
-def load_ml_data():
-    df = pd.read_csv("공공도서관 자치구별 통계 파일.csv", encoding='cp949', header=1)
-    df = df[df.iloc[:,0] != '소계']
-    df.columns = [
-        '자치구명','개소수','좌석수','자료수_도서','자료수_비도서','자료수_연속간행물',
-        '도서관 방문자수','연간대출책수','직원수','직원수_남','직원수_여','예산'
-    ]
-    for col in df.columns[1:]:
-        df[col] = df[col].astype(str).str.replace(',', '').astype(float)
-    return df
+X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
+y = df_stat['도서관 방문자수']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-try:
-    df_stat = load_ml_data()
-    st.subheader("📄 통계 데이터 미리보기")
-    st.dataframe(df_stat)
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
 
-    X = df_stat.drop(columns=['자치구명','도서관 방문자수'])
-    y = df_stat['도서관 방문자수']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+st.markdown(f"✅ **MSE**: `{mse:,.0f}`  |  **R²**: `{r2:.4f}`")
 
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+st.subheader("🔍 변수 중요도 분석")
+importance = pd.Series(model.feature_importances_, index=X.columns)
+fig2, ax2 = plt.subplots(figsize=(10, 6))
+importance.sort_values().plot.barh(ax=ax2, color='skyblue')
 
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    st.markdown(f"✅ **MSE**: `{mse:,.0f}`  |  **R²**: `{r2:.4f}`")
+ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, fontproperties=font_prop)
+ax2.set_xlabel("중요도", fontproperties=font_prop)
+ax2.set_ylabel("변수 이름", fontproperties=font_prop)
+ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
+ax2.set_xticklabels(ax2.get_xticks(), fontproperties=font_prop)
+ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}"))
 
-    st.subheader("🔍 변수 중요도 분석")
-    importance = pd.Series(model.feature_importances_, index=X.columns)
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    importance.sort_values().plot.barh(ax=ax2, color='skyblue')
-
-    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, fontproperties=font_prop)
-    ax2.set_xlabel("중요도", fontproperties=font_prop)
-    ax2.set_ylabel("변수 이름", fontproperties=font_prop)
-    ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
-    ax2.set_xticklabels(ax2.get_xticks(), fontproperties=font_prop)
-
-    # ✅ 눈금 소수점 포맷 지정
-    ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}"))
-
-    st.pyplot(fig2)
-
-except Exception as e:
-    st.error(f"❌ 오류 발생: {e}")
+st.pyplot(fig2)
