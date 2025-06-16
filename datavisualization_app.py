@@ -1,17 +1,11 @@
 import streamlit as st
-import os
 
-# ✅ 앱 페이지 설정은 반드시 가장 먼저
+# ✅ 반드시 가장 먼저 위치해야 함!
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
-
-# ✅ 캐시 초기화 (URL에 ?clear=1 추가 시)
-if st.query_params.get("clear") == "1":
-    st.cache_data.clear()
-    st.cache_resource.clear()
-    st.success("✅ 캐시가 초기화되었습니다.")
 
 import pandas as pd
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.font_manager as fm
@@ -22,7 +16,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 1. 한글 폰트 설정
+# 1. 한글 폰트 강제 설정
 # -----------------------
 def set_korean_font():
     font_path = os.path.join(os.getcwd(), "NanumGothicCoding.ttf")
@@ -34,22 +28,23 @@ def set_korean_font():
         mpl.rcParams['axes.unicode_minus'] = False
         st.write(f"✅ 한글 폰트 적용 완료: {font_name}")
     else:
-        st.warning("⚠️ 'NanumGothicCoding.ttf' 파일이 존재하지 않습니다.")
+        st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본폰트 사용 중.")
 
+# 앱 시작 시 먼저 실행
 set_korean_font()
 
 # -----------------------
-# 2. 타이틀
+# 2. Streamlit 제목
 # -----------------------
 st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 
 # -----------------------
-# 3. 이용자 수 데이터 로드
+# 3. 자치구별 이용자 수 데이터 로드
 # -----------------------
 @st.cache_data
 def load_user_data():
     df = pd.read_excel("서울시 공공도서관 서울도서관 이용자 현황 전처리 완료 파일.xlsx", sheet_name="최신 이용자")
-    df = df[['실거주', '이용자수']]
+    df = df[['실거주', '이용자수']].copy()
     df.columns = ['구', '이용자수']
     df['이용자수'] = pd.to_numeric(df['이용자수'], errors='coerce')
     df.dropna(inplace=True)
@@ -104,18 +99,18 @@ for _, row in df_users.iterrows():
 folium_static(m)
 
 # -----------------------
-# 6. 가장 많은 구 출력
+# 6. 최다 이용 구 출력
 # -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{int(top_gu['이용자수']):,}명`** 입니다.")
 
 # -----------------------
-# 7. 머신러닝 예측
+# 7. 머신러닝 준비 및 결과
 # -----------------------
 @st.cache_data
 def load_ml_data():
     df = pd.read_csv("공공도서관 자치구별 통계 파일.csv", encoding='cp949', header=1)
-    df = df[df.iloc[:, 0] != '소계']
+    df = df[df.iloc[:,0] != '소계']
     df.columns = [
         '자치구명','개소수','좌석수','자료수_도서','자료수_비도서','자료수_연속간행물',
         '도서관 방문자수','연간대출책수','직원수','직원수_남','직원수_여','예산'
@@ -129,7 +124,7 @@ try:
     st.subheader("📄 통계 데이터 미리보기")
     st.dataframe(df_stat)
 
-    X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
+    X = df_stat.drop(columns=['자치구명','도서관 방문자수'])
     y = df_stat['도서관 방문자수']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -152,6 +147,5 @@ try:
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
-
 
 
