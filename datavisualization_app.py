@@ -14,7 +14,6 @@ from streamlit_folium import folium_static
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-import matplotlib.colors as mcolors
 
 # -----------------------
 # 1. 한글 폰트 설정
@@ -60,6 +59,7 @@ bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
 ax.set_ylabel("이용자 수", fontproperties=font_prop)
+
 ax.set_xticks(range(len(df_sorted)))
 ax.set_xticklabels(df_sorted['구'], rotation=45, fontproperties=font_prop)
 ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
@@ -67,7 +67,7 @@ ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 시각화 (색상 다르게)
+# 5. 지도 시각화
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -82,11 +82,6 @@ sample_locations = {
     "은평구": [37.6176, 126.9227], "종로구": [37.5731, 126.9795], "중구": [37.5636, 126.9976],
     "중랑구": [37.6063, 127.0927]
 }
-
-colors = list(mcolors.TABLEAU_COLORS.values()) + list(mcolors.CSS4_COLORS.values())
-unique_districts = list(sample_locations.keys())
-color_map = {gu: colors[i % len(colors)] for i, gu in enumerate(unique_districts)}
-
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 
@@ -98,10 +93,7 @@ for _, row in df_users.iterrows():
             location=sample_locations[gu],
             radius=5 + 15 * (val - min_val) / (max_val - min_val),
             popup=f"{gu}: {int(val):,}명",
-            color=color_map.get(gu, "blue"),
-            fill=True,
-            fill_color=color_map.get(gu, "blue"),
-            fill_opacity=0.6
+            color='blue', fill=True, fill_opacity=0.6
         ).add_to(m)
 
 folium_static(m)
