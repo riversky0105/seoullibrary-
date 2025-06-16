@@ -1,6 +1,9 @@
 import streamlit as st
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
+# ✅ 앱 제목 다시 추가
+st.title("📚 서울시 도서관 분석 및 예측")
+
 import pandas as pd, numpy as np, os
 import matplotlib.pyplot as plt, matplotlib as mpl, matplotlib.font_manager as fm
 import folium, requests, json
@@ -9,8 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from matplotlib.ticker import FuncFormatter
-from shapely.geometry import shape
-
+from shapely.geometry import shape  # ⬅️ 지도 중심 좌표 계산용
 # 한글 폰트 설정
 font_path = os.path.join(os.getcwd(), "fonts", "NanumGothicCoding.ttf")
 if os.path.exists(font_path):
