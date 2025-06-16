@@ -71,11 +71,10 @@ ax.set_yticklabels([f"{int(t):,}" for t in y_ticks], fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 시각화 (서울시 경계 GeoJSON 적용)
+# 5. 지도 시각화 (서울시 경계 단색 표시)
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
-# 자치구 중심 좌표
 sample_locations = {
     "강남구": [37.5172, 127.0473], "강동구": [37.5301, 127.1238], "강북구": [37.6396, 127.0256],
     "강서구": [37.5509, 126.8495], "관악구": [37.4784, 126.9516], "광진구": [37.5385, 127.0823],
@@ -88,10 +87,9 @@ sample_locations = {
     "중랑구": [37.6063, 127.0927]
 }
 
-# 지도 생성
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
-# ✅ 서울시 GeoJSON 경계 표시
+# ✅ 서울시 경계 (단색 표시)
 geo_url = "https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json"
 try:
     response = requests.get(geo_url)
@@ -100,16 +98,17 @@ try:
     folium.GeoJson(
         seoul_geo,
         name="서울시 경계",
-        style_function=lambda x: {
-            'color': 'gray',
-            'weight': 2,
-            'fillOpacity': 0
+        style_function=lambda feature: {
+            'fillColor': '#dddddd',
+            'color': '#666666',
+            'weight': 1,
+            'fillOpacity': 0.2
         }
     ).add_to(m)
 except Exception as e:
     st.warning(f"⚠️ 서울시 GeoJSON 불러오기 실패: {e}")
 
-# 자치구별 이용자 수 시각화 (원)
+# ✅ 자치구 원 마커
 min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 for _, row in df_users.iterrows():
     gu = row['구']
