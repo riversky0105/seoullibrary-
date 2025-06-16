@@ -1,18 +1,14 @@
-# ❗ Streamlit에서는 pip 명령어를 직접 실행하지 않으므로 주석 처리
-# !pip install koreanize-matplotlib
-
 import streamlit as st
 
-# ✅ 반드시 가장 먼저 위치해야 함!
+# ✅ 가장 먼저 설정
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-import seaborn as sns
-import koreanize_matplotlib  # ✅ 한글 폰트 자동 설정
-
+import matplotlib as mpl
+import matplotlib.font_manager as fm
 import folium
 from streamlit_folium import folium_static
 from sklearn.model_selection import train_test_split
@@ -20,12 +16,29 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 1. Streamlit 제목
+# ✅ 한글 폰트 설정 (koreanize-matplotlib 제거)
+# -----------------------
+def set_korean_font():
+    font_path = os.path.join(os.getcwd(), "fonts", "NanumGothicCoding.ttf")
+    if os.path.exists(font_path):
+        font_prop = fm.FontProperties(fname=font_path)
+        font_name = font_prop.get_name()
+        mpl.rc('font', family=font_name)
+        plt.rcParams['font.family'] = font_name
+        mpl.rcParams['axes.unicode_minus'] = False
+        st.write(f"✅ 한글 폰트 적용 완료: {font_name}")
+    else:
+        st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본 폰트 사용 중.")
+
+set_korean_font()
+
+# -----------------------
+# Streamlit UI 시작
 # -----------------------
 st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 
 # -----------------------
-# 2. 자치구별 이용자 수 데이터 로드
+# 자치구별 이용자 수 데이터 로드
 # -----------------------
 @st.cache_data
 def load_user_data():
@@ -40,7 +53,7 @@ def load_user_data():
 df_users = load_user_data()
 
 # -----------------------
-# 3. 바 차트 시각화
+# 자치구별 바 차트 시각화
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
@@ -53,7 +66,7 @@ plt.xticks(rotation=45)
 st.pyplot(fig)
 
 # -----------------------
-# 4. 지도 시각화
+# 지도 시각화
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -85,13 +98,13 @@ for _, row in df_users.iterrows():
 folium_static(m)
 
 # -----------------------
-# 5. 최다 이용 구 출력
+# 가장 많은 이용 구 표시
 # -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{int(top_gu['이용자수']):,}명`** 입니다.")
 
 # -----------------------
-# 6. 머신러닝 준비 및 결과
+# 머신러닝 분석
 # -----------------------
 @st.cache_data
 def load_ml_data():
@@ -133,6 +146,7 @@ try:
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
 
 
 
