@@ -118,7 +118,7 @@ st.markdown(f"✅ **예측 오차(MSE)**: `{mse:,.0f}` | **정확도(R²)**: `{r
 importance = pd.Series(model.feature_importances_, index=X.columns)
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 importance.sort_values().plot.barh(ax=ax2, color='skyblue')
-ax2.set_title("📌 RandomForest 변수 중요도", fontproperties=font_prop)
+ax2.set_title("RandomForest 변수 중요도", fontproperties=font_prop)
 ax2.set_xlabel("중요도", fontproperties=font_prop)
 ax2.set_ylabel("변수", fontproperties=font_prop)
 ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
