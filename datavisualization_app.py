@@ -52,13 +52,18 @@ df_users = load_user_data()
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
+
 fig, ax = plt.subplots(figsize=(12, 6))
-ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
-ax.set_ylabel("이용자 수", fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
-plt.xticks(rotation=45, fontproperties=font_prop)
-plt.yticks(fontproperties=font_prop)
+ax.set_ylabel("이용자 수", fontproperties=font_prop)
+
+ax.set_xticks(range(len(df_sorted)))
+ax.set_xticklabels(df_sorted['구'], rotation=45, fontproperties=font_prop)
+ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
+
 st.pyplot(fig)
 
 # -----------------------
@@ -135,11 +140,13 @@ try:
     importance = pd.Series(model.feature_importances_, index=X.columns)
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     importance.sort_values().plot.barh(ax=ax2, color='skyblue')
+
     ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, fontproperties=font_prop)
     ax2.set_xlabel("중요도", fontproperties=font_prop)
     ax2.set_ylabel("변수 이름", fontproperties=font_prop)
-    plt.xticks(fontproperties=font_prop)
-    plt.yticks(fontproperties=font_prop)
+    ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
+    ax2.set_xticklabels(ax2.get_xticks(), fontproperties=font_prop)
+
     st.pyplot(fig2)
 
 except Exception as e:
