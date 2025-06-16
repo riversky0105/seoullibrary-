@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ✅ 반드시 가장 먼저 위치해야 함!
+# ✅ 가장 먼저 실행해야 함
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 import pandas as pd
@@ -14,6 +14,7 @@ from streamlit_folium import folium_static
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
+from matplotlib.ticker import FuncFormatter
 
 # -----------------------
 # 1. 한글 폰트 설정
@@ -28,12 +29,12 @@ else:
     st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본폰트 사용 중.")
 
 # -----------------------
-# 2. Streamlit 제목
+# 2. 제목
 # -----------------------
 st.title("📚 서울시 도서관 이용자 수 분석 및 예측")
 
 # -----------------------
-# 3. 자치구별 이용자 수 데이터 로드
+# 3. 데이터 로드
 # -----------------------
 @st.cache_data
 def load_user_data():
@@ -48,7 +49,7 @@ def load_user_data():
 df_users = load_user_data()
 
 # -----------------------
-# 4. 바 차트 시각화
+# 4. 바 차트
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
@@ -59,7 +60,6 @@ bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
 ax.set_ylabel("이용자 수", fontproperties=font_prop)
-
 ax.set_xticks(range(len(df_sorted)))
 ax.set_xticklabels(df_sorted['구'], rotation=45, fontproperties=font_prop)
 ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
@@ -67,7 +67,7 @@ ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 시각화
+# 5. 지도 (색상: 파란색 고정)
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -82,6 +82,7 @@ sample_locations = {
     "은평구": [37.6176, 126.9227], "종로구": [37.5731, 126.9795], "중구": [37.5636, 126.9976],
     "중랑구": [37.6063, 127.0927]
 }
+
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 
@@ -93,19 +94,22 @@ for _, row in df_users.iterrows():
             location=sample_locations[gu],
             radius=5 + 15 * (val - min_val) / (max_val - min_val),
             popup=f"{gu}: {int(val):,}명",
-            color='blue', fill=True, fill_opacity=0.6
+            color='blue',
+            fill=True,
+            fill_color='blue',
+            fill_opacity=0.6
         ).add_to(m)
 
 folium_static(m)
 
 # -----------------------
-# 6. 최다 이용 구 출력
+# 6. 최다 이용 구
 # -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{int(top_gu['이용자수']):,}명`** 입니다.")
 
 # -----------------------
-# 7. 머신러닝 준비 및 결과
+# 7. 머신러닝 + 변수 중요도
 # -----------------------
 @st.cache_data
 def load_ml_data():
@@ -146,6 +150,9 @@ try:
     ax2.set_ylabel("변수 이름", fontproperties=font_prop)
     ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
     ax2.set_xticklabels(ax2.get_xticks(), fontproperties=font_prop)
+
+    # ✅ 눈금 소수점 포맷 지정
+    ax2.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:.1f}"))
 
     st.pyplot(fig2)
 
