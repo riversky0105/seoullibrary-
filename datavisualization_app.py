@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ✅ 반드시 가장 먼저 위치해야 함!
+# ✅ 가장 먼저 실행
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 import pandas as pd
@@ -51,22 +51,23 @@ def load_ml_data():
 df_stat = load_ml_data()
 
 # -----------------------
-# 4. 자치구별 도서관 이용자 수 시각화
+# 4. 전체 데이터 표시
+# -----------------------
+st.subheader("📄 자치구별 통계 데이터 전체 확인")
+st.dataframe(df_stat)
+
+# -----------------------
+# 5. 자치구별 도서관 이용자 수 그래프
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 
 df_users = df_stat[['자치구명', '도서관 방문자수']].copy()
 df_users.columns = ['구', '이용자수']
-df_users['이용자수'] = df_users['이용자수'].astype(int)  # ✅ 소수점 제거 (정수 변환)
+df_users['이용자수'] = df_users['이용자수'].astype(int)
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 
-# ✅ 전체 데이터 표시
-st.markdown("📄 **전체 데이터 미리보기**")
-st.dataframe(df_users)
-
-# ✅ 바 차트
 fig, ax = plt.subplots(figsize=(12, 6))
-bars = ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
 
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
@@ -78,7 +79,7 @@ ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 시각화
+# 6. 지도 시각화 (원 크기 확대)
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -101,10 +102,12 @@ for _, row in df_users.iterrows():
     gu = row['구']
     if gu in sample_locations:
         val = row['이용자수']
+        norm_val = (val - min_val) / (max_val - min_val)
+        radius = 10 + 30 * norm_val  # ✅ 원 크기 확대
         folium.CircleMarker(
             location=sample_locations[gu],
-            radius=5 + 15 * (val - min_val) / (max_val - min_val),
-            popup=f"{gu}: {int(val):,}명",
+            radius=radius,
+            popup=f"{gu}: {val:,}명",
             color='blue',
             fill=True,
             fill_color='blue',
@@ -114,13 +117,13 @@ for _, row in df_users.iterrows():
 folium_static(m)
 
 # -----------------------
-# 6. 최다 이용 구 출력
+# 7. 최다 이용 구 출력
 # -----------------------
 top_gu = df_sorted.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{top_gu['이용자수']:,}명`** 입니다.")
 
 # -----------------------
-# 7. 머신러닝 + 변수 중요도
+# 8. 머신러닝 + 변수 중요도
 # -----------------------
 X = df_stat.drop(columns=['자치구명', '도서관 방문자수'])
 y = df_stat['도서관 방문자수']
