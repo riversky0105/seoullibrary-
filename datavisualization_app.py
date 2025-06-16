@@ -16,22 +16,16 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# ✅ 1. 한글 폰트 강제 설정 함수 복원
+# 1. 한글 폰트 설정
 # -----------------------
-def set_korean_font():
-    font_path = os.path.join(os.getcwd(), "fonts", "NanumGothicCoding.ttf")
-    if os.path.exists(font_path):
-        font_prop = fm.FontProperties(fname=font_path)
-        font_name = font_prop.get_name()
-        mpl.rc('font', family=font_name)
-        plt.rcParams['font.family'] = font_name
-        mpl.rcParams['axes.unicode_minus'] = False
-        st.write(f"✅ 한글 폰트 적용 완료: {font_name}")
-    else:
-        st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본 폰트 사용 중.")
-
-# 앱 시작 시 먼저 실행
-set_korean_font()
+font_path = os.path.join(os.getcwd(), "fonts", "NanumGothicCoding.ttf")
+if os.path.exists(font_path):
+    font_prop = fm.FontProperties(fname=font_path)
+    mpl.rcParams['axes.unicode_minus'] = False
+    st.write(f"✅ 한글 폰트 적용 완료: {font_prop.get_name()}")
+else:
+    font_prop = None
+    st.warning("⚠️ NanumGothicCoding.ttf 폰트 파일이 없습니다. 기본폰트 사용 중.")
 
 # -----------------------
 # 2. Streamlit 제목
@@ -60,10 +54,11 @@ st.subheader("📊 자치구별 도서관 이용자 수")
 df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
-ax.set_title("📌 자치구별 이용자 수", fontsize=16)
-ax.set_ylabel("이용자 수")
-ax.set_xlabel("자치구")
-plt.xticks(rotation=45)
+ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
+ax.set_ylabel("이용자 수", fontproperties=font_prop)
+ax.set_xlabel("자치구", fontproperties=font_prop)
+plt.xticks(rotation=45, fontproperties=font_prop)
+plt.yticks(fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
@@ -140,15 +135,12 @@ try:
     importance = pd.Series(model.feature_importances_, index=X.columns)
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     importance.sort_values().plot.barh(ax=ax2, color='skyblue')
-    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16)
-    ax2.set_xlabel("중요도", fontsize=12)
-    ax2.set_ylabel("변수 이름", fontsize=12)
+    ax2.set_title("📌 RandomForest 변수 중요도", fontsize=16, fontproperties=font_prop)
+    ax2.set_xlabel("중요도", fontproperties=font_prop)
+    ax2.set_ylabel("변수 이름", fontproperties=font_prop)
+    plt.xticks(fontproperties=font_prop)
+    plt.yticks(fontproperties=font_prop)
     st.pyplot(fig2)
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
-
-
-
-
-
