@@ -51,12 +51,14 @@ st.subheader("📄 자치구별 통계 데이터")
 st.dataframe(df_stat)
 
 # -----------------------
-# 4. 자치구별 도서관 이용자 수 그래프
+# 4. 자치구별 도서관 이용자 수 그래프 (내림차순 정렬)
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
+
 df_users = df_stat[['자치구명', '도서관 방문자수']].copy()
 df_users.columns = ['구', '이용자수']
 df_users['이용자수'] = df_users['이용자수'].astype(int)
+df_users = df_users.sort_values(by="이용자수", ascending=False).reset_index(drop=True)
 
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.bar(df_users['구'], df_users['이용자수'], color='skyblue')
@@ -71,7 +73,7 @@ ax.set_yticklabels([f"{int(t):,}" for t in y_ticks], fontproperties=font_prop)
 st.pyplot(fig)
 
 # -----------------------
-# 5. 지도 시각화 (서울시 경계 단색 표시)
+# 5. 지도 시각화 (검은 경계, 두꺼운 선)
 # -----------------------
 st.subheader("🗺️ 자치구별 도서관 이용자 수 지도")
 
@@ -89,31 +91,29 @@ sample_locations = {
 
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
 
-# ✅ 서울시 경계 (단색 표시)
+# GeoJSON 로드
 geo_url = "https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json"
 try:
     response = requests.get(geo_url)
     seoul_geo = response.json()
-
     folium.GeoJson(
         seoul_geo,
         name="서울시 경계",
-        style_function=lambda feature: {
+        style_function=lambda x: {
             'fillColor': '#dddddd',
-            'color': '#666666',
-            'weight': 1,
+            'color': 'black',
+            'weight': 3,
             'fillOpacity': 0.2
         }
     ).add_to(m)
 except Exception as e:
     st.warning(f"⚠️ 서울시 GeoJSON 불러오기 실패: {e}")
 
-# ✅ 자치구 원 마커
+# 원 마커 표시
 min_val, max_val = df_users['이용자수'].min(), df_users['이용자수'].max()
 for _, row in df_users.iterrows():
-    gu = row['구']
+    gu, val = row['구'], row['이용자수']
     if gu in sample_locations:
-        val = row['이용자수']
         norm = (val - min_val) / (max_val - min_val)
         folium.CircleMarker(
             location=sample_locations[gu],
@@ -131,7 +131,7 @@ folium_static(m)
 # -----------------------
 # 6. 최다 이용 구 출력
 # -----------------------
-top_gu = df_users.loc[df_users['이용자수'].idxmax()]
+top_gu = df_users.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{top_gu['이용자수']:,}명`** 입니다.")
 
 # -----------------------
