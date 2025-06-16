@@ -16,10 +16,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------
-# 1. 한글 폰트 강제 설정
+# 1. 한글 폰트 강제 설정 (경로 수정 완료)
 # -----------------------
 def set_korean_font():
-    font_path = os.path.join(os.getcwd(), "NanumGothicCoding.ttf")
+    font_path = os.path.join(os.getcwd(), "fonts", "NanumGothicCoding.ttf")  # ✅ 수정됨
     if os.path.exists(font_path):
         font_prop = fm.FontProperties(fname=font_path)
         font_name = font_prop.get_name()
@@ -147,6 +147,7 @@ try:
 
 except Exception as e:
     st.error(f"❌ 오류 발생: {e}")
+
 
 
 
