@@ -51,30 +51,34 @@ def load_ml_data():
 df_stat = load_ml_data()
 
 # -----------------------
-# 4. 전체 데이터 표시
+# 4. 통계 데이터 표시 (도서관 방문자수 기준 정렬)
 # -----------------------
-st.subheader("📄 자치구별 통계 데이터 전체 확인")
-st.dataframe(df_stat)
+st.subheader("📄 자치구별 통계 데이터 (방문자 수 기준 정렬)")
+df_stat_sorted = df_stat.sort_values(by='도서관 방문자수', ascending=False)
+st.dataframe(df_stat_sorted)
 
 # -----------------------
 # 5. 자치구별 도서관 이용자 수 그래프
 # -----------------------
 st.subheader("📊 자치구별 도서관 이용자 수")
 
-df_users = df_stat[['자치구명', '도서관 방문자수']].copy()
+df_users = df_stat_sorted[['자치구명', '도서관 방문자수']].copy()
 df_users.columns = ['구', '이용자수']
 df_users['이용자수'] = df_users['이용자수'].astype(int)
-df_sorted = df_users.sort_values(by="이용자수", ascending=False)
 
 fig, ax = plt.subplots(figsize=(12, 6))
-ax.bar(df_sorted['구'], df_sorted['이용자수'], color='skyblue')
+ax.bar(df_users['구'], df_users['이용자수'], color='skyblue')
 
 ax.set_title("📌 자치구별 이용자 수", fontsize=16, fontproperties=font_prop)
 ax.set_xlabel("자치구", fontproperties=font_prop)
 ax.set_ylabel("이용자 수", fontproperties=font_prop)
-ax.set_xticks(range(len(df_sorted)))
-ax.set_xticklabels(df_sorted['구'], rotation=45, fontproperties=font_prop)
-ax.set_yticklabels(ax.get_yticks(), fontproperties=font_prop)
+ax.set_xticks(range(len(df_users)))
+ax.set_xticklabels(df_users['구'], rotation=45, fontproperties=font_prop)
+
+# ✅ y축 숫자 자연수로 표시
+y_ticks = ax.get_yticks()
+ax.set_yticks(y_ticks)
+ax.set_yticklabels([f"{int(tick):,}" for tick in y_ticks], fontproperties=font_prop)
 
 st.pyplot(fig)
 
@@ -103,7 +107,7 @@ for _, row in df_users.iterrows():
     if gu in sample_locations:
         val = row['이용자수']
         norm_val = (val - min_val) / (max_val - min_val)
-        radius = 10 + 30 * norm_val  # ✅ 원 크기 확대
+        radius = 10 + 30 * norm_val  # ✅ 겹치지 않게 확대
         folium.CircleMarker(
             location=sample_locations[gu],
             radius=radius,
@@ -119,7 +123,7 @@ folium_static(m)
 # -----------------------
 # 7. 최다 이용 구 출력
 # -----------------------
-top_gu = df_sorted.iloc[0]
+top_gu = df_users.iloc[0]
 st.success(f"✅ 가장 도서관 이용자 수가 많은 구는 **`{top_gu['구']}`**, 총 **`{top_gu['이용자수']:,}명`** 입니다.")
 
 # -----------------------
