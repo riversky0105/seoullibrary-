@@ -1,8 +1,9 @@
 pandas
-numpy
 matplotlib
-folium
+seaborn
+koreanize-matplotlib
 scikit-learn
 openpyxl
+folium
 streamlit
 streamlit-folium
