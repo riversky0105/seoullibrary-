@@ -1,3 +1,4 @@
+import streamlit as st
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
 st.title("📚 서울특별시 자치구별 도서관 이용자 수 분석 및 예측")
