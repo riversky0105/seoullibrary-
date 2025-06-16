@@ -1,7 +1,7 @@
 import streamlit as st
 st.set_page_config(page_title="서울시 도서관 분석 및 예측", layout="wide")
 
-st.title("📚 서울시 도서관 분석 및 예측")
+st.title("📚 서울시 자치구별 도서관 이용자 수 분석 및 예측")
 
 import pandas as pd
 import numpy as np
@@ -46,7 +46,7 @@ df_users['이용자수'] = df_users['이용자수'].astype(int)
 df_users_sorted = df_users.sort_values(by='이용자수', ascending=False).reset_index(drop=True)
 
 # 📊 자치구별 도서관 이용자 수 시각화
-st.subheader("📊 자치구별 도서관 이용자 수")
+st.subheader("📊 서울시 자치구별 도서관 이용자 수 시각화화")
 st.markdown("서울시 각 자치구의 도서관 방문자 수를 나타낸 막대그래프입니다. 그래프는 방문자 수가 많은 자치구부터 순서대로 정렬되어 있으며, 막대의 길이가 방문자 수 규모를 나타냅니다.")
 
 fig, ax = plt.subplots(figsize=(12, 6))
@@ -61,7 +61,7 @@ ax.set_yticklabels([f"{int(t):,}" for t in yticks], fontproperties=font_prop)
 st.pyplot(fig)
 
 # 🗺️ 지도 시각화
-st.subheader("🗺️ 서울시 자치구 도서관 이용자 수 지도")
+st.subheader("🗺️ 서울시 자치구 도서관 이용자 수 지도 시각화화")
 st.markdown("서울시 각 자치구의 경계 안에 위치한 마커는 해당 구의 도서관 방문자 수 규모를 나타냅니다. 마커 크기가 클수록 방문자 수가 많습니다.")
 
 geo_url = "https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json"
