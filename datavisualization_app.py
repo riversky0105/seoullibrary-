@@ -26,7 +26,6 @@ if os.path.exists(font_path):
 else:
     font_prop = None
 
-# 데이터 불러오기
 @st.cache_data
 def load_ml_data():
     df = pd.read_csv("공공도서관 자치구별 통계 파일.csv", encoding='cp949', header=1)
@@ -41,7 +40,6 @@ def load_ml_data():
 
 df_stat = load_ml_data()
 
-# 자치구별 이용자수 정리
 df_users = df_stat[['자치구명','도서관 방문자수']].copy()
 df_users.columns = ['구','이용자수']
 df_users['이용자수'] = df_users['이용자수'].astype(int)
@@ -71,8 +69,6 @@ res = requests.get(geo_url)
 seoul_geo = res.json()
 
 m = folium.Map(location=[37.5665, 126.9780], zoom_start=11)
-
-# 경계 추가
 folium.GeoJson(seoul_geo, name="경계", style_function=lambda f: {
     'fillColor': '#dddddd',
     'color': 'black',
@@ -80,7 +76,6 @@ folium.GeoJson(seoul_geo, name="경계", style_function=lambda f: {
     'fillOpacity': 0.2
 }).add_to(m)
 
-# 구 중심에 원형 마커 표시
 min_v, max_v = df_users['이용자수'].min(), df_users['이용자수'].max()
 for feature in seoul_geo['features']:
     gu = feature['properties']['name']
@@ -101,7 +96,6 @@ for feature in seoul_geo['features']:
 folium.LayerControl().add_to(m)
 folium_static(m)
 
-# ✅ 최다 이용 구 출력
 top = df_users_sorted.iloc[0]
 st.success(f"✅ 도서관을 가장 많이 이용한 구는 **{top['구']}**, 총 **{top['이용자수']:,}명**이에요!")
 
@@ -119,15 +113,14 @@ y_pred = model.predict(X_test)
 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
-
 st.markdown(f"✅ **예측 오차(MSE)**: `{mse:,.0f}` | **정확도(R²)**: `{r2:.4f}`")
 
 importance = pd.Series(model.feature_importances_, index=X.columns)
 fig2, ax2 = plt.subplots(figsize=(10, 6))
 importance.sort_values().plot.barh(ax=ax2, color='skyblue')
-ax2.set_title("📌 어떤 요소가 중요할까요?", fontproperties=font_prop)
+ax2.set_title("📌 RandomForest 변수 중요도", fontproperties=font_prop)
 ax2.set_xlabel("중요도", fontproperties=font_prop)
-ax2.set_ylabel("요소 이름", fontproperties=font_prop)
+ax2.set_ylabel("변수", fontproperties=font_prop)
 ax2.set_yticklabels(importance.sort_values().index, fontproperties=font_prop)
 xticks = ax2.get_xticks()
 ax2.set_xticklabels([f"{x:.1f}" for x in xticks], fontproperties=font_prop)
